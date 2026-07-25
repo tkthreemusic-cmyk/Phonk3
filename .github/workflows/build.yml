@@ -26,7 +26,7 @@ jobs:
         run: |
           $vst3Path = Get-ChildItem -Path "build" -Recurse -Filter "*.vst3" | Select-Object -First 1 -ExpandProperty FullName
           Write-Host "Found VST3: $vst3Path"
-          Write-Host "::set-output name=vst3_path::$vst3Path"
+          Write-Host "vst3_path=$vst3Path" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
       - name: Package VST3
         shell: pwsh
@@ -35,17 +35,14 @@ jobs:
           if ($vst3Path) {
             Compress-Archive -Path "$vst3Path\*" -DestinationPath "PhonkSynth-Windows-VST3.zip" -Force
             Write-Host "Created PhonkSynth-Windows-VST3.zip"
-            Get-Item "PhonkSynth-Windows-VST3.zip"
-          } else {
-            Write-Host "No VST3 found!"
-            Get-ChildItem -Path "build" -Recurse -Directory | Select-Object -First 20
           }
 
-      - name: Upload Release Asset
-        if: success()
-        uses: softprops/action-gh-release@v2
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
         with:
-          files: PhonkSynth-Windows-VST3.zip
+          name: PhonkSynth-Windows-VST3
+          path: PhonkSynth-Windows-VST3.zip
+          retention-days: 7
 
   build-linux:
     runs-on: ubuntu-latest
@@ -74,8 +71,26 @@ jobs:
           cd "${{ steps.find-vst3.outputs.vst3_path }}"
           zip -r "../../../../PhonkSynth-Linux-VST3.zip" .
 
-      - name: Upload Release Asset
-        if: success()
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PhonkSynth-Linux-VST3
+          path: PhonkSynth-Linux-VST3.zip
+          retention-days: 7
+
+  release:
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: PhonkSynth-Linux-VST3.zip
+          files: artifacts/**/*.zip
+          draft: true
