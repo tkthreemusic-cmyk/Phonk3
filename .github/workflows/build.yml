@@ -25,21 +25,18 @@ jobs:
       - name: Build VST3
         run: cmake --build build --config Release
 
-      - name: Find VST3
+      - name: Find and Package VST3
         shell: pwsh
-        id: find-vst3
         run: |
-          $vst3Path = Get-ChildItem -Path "build" -Recurse -Filter "*.vst3" | Select-Object -First 1 -ExpandProperty FullName
+          $vst3Path = Get-ChildItem -Path "build" -Recurse -Filter "*.vst3" -Directory | Select-Object -First 1 -ExpandProperty FullName
           Write-Host "Found VST3: $vst3Path"
-          Write-Host "vst3_path=$vst3Path" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-
-      - name: Package VST3
-        shell: pwsh
-        run: |
-          $vst3Path = "${{ steps.find-vst3.outputs.vst3_path }}"
           if ($vst3Path) {
             Compress-Archive -Path "$vst3Path\*" -DestinationPath "PhonkSynth-Windows-VST3.zip" -Force
             Write-Host "Created PhonkSynth-Windows-VST3.zip"
+            Get-ChildItem "PhonkSynth-Windows-VST3.zip"
+          } else {
+            Write-Host "ERROR: No VST3 found!"
+            exit 1
           }
 
       - name: Upload Artifact
@@ -64,17 +61,19 @@ jobs:
       - name: Build VST3
         run: cmake --build build --config Release --target PhonkSynth_VST3
 
-      - name: Find VST3
-        id: find-vst3
+      - name: Find and Package VST3
         run: |
           VST3_PATH=$(find build -name "*.vst3" -type d 2>/dev/null | head -1)
           echo "Found VST3: $VST3_PATH"
-          echo "vst3_path=$VST3_PATH" >> $GITHUB_OUTPUT
-
-      - name: Package VST3
-        run: |
-          cd "${{ steps.find-vst3.outputs.vst3_path }}"
-          zip -r "../../../../PhonkSynth-Linux-VST3.zip" .
+          if [ -n "$VST3_PATH" ]; then
+            cd "$VST3_PATH"
+            zip -r "$GITHUB_WORKSPACE/PhonkSynth-Linux-VST3.zip" .
+            cd -
+            ls -la "$GITHUB_WORKSPACE/PhonkSynth-Linux-VST3.zip"
+          else
+            echo "ERROR: No VST3 found!"
+            exit 1
+          fi
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
