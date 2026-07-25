@@ -20,13 +20,29 @@ jobs:
       - name: Build VST3
         run: cmake --build build --config Release --target PhonkSynth_VST3
 
+      - name: Find VST3
+        shell: pwsh
+        id: find-vst3
+        run: |
+          $vst3Path = Get-ChildItem -Path "build" -Recurse -Filter "*.vst3" | Select-Object -First 1 -ExpandProperty FullName
+          Write-Host "Found VST3: $vst3Path"
+          Write-Host "::set-output name=vst3_path::$vst3Path"
+
       - name: Package VST3
         shell: pwsh
         run: |
-          $vst3Dir = "build\PhonkSynth_artefacts\Release\VST3\Phonk Synth.vst3"
-          Compress-Archive -Path $vst3Dir -DestinationPath "PhonkSynth-Windows-VST3.zip" -Force
+          $vst3Path = "${{ steps.find-vst3.outputs.vst3_path }}"
+          if ($vst3Path) {
+            Compress-Archive -Path "$vst3Path\*" -DestinationPath "PhonkSynth-Windows-VST3.zip" -Force
+            Write-Host "Created PhonkSynth-Windows-VST3.zip"
+            Get-Item "PhonkSynth-Windows-VST3.zip"
+          } else {
+            Write-Host "No VST3 found!"
+            Get-ChildItem -Path "build" -Recurse -Directory | Select-Object -First 20
+          }
 
       - name: Upload Release Asset
+        if: success()
         uses: softprops/action-gh-release@v2
         with:
           files: PhonkSynth-Windows-VST3.zip
@@ -46,12 +62,20 @@ jobs:
       - name: Build VST3
         run: cmake --build build --config Release --target PhonkSynth_VST3
 
+      - name: Find VST3
+        id: find-vst3
+        run: |
+          VST3_PATH=$(find build -name "*.vst3" -type d 2>/dev/null | head -1)
+          echo "Found VST3: $VST3_PATH"
+          echo "vst3_path=$VST3_PATH" >> $GITHUB_OUTPUT
+
       - name: Package VST3
         run: |
-          cd build/PhonkSynth_artefacts/Release/VST3
-          zip -r "../../../../PhonkSynth-Linux-VST3.zip" "Phonk Synth.vst3"
+          cd "${{ steps.find-vst3.outputs.vst3_path }}"
+          zip -r "../../../../PhonkSynth-Linux-VST3.zip" .
 
       - name: Upload Release Asset
+        if: success()
         uses: softprops/action-gh-release@v2
         with:
-          files: build/PhonkSynth_artefacts/Release/PhonkSynth-Linux-VST3.zip
+          files: PhonkSynth-Linux-VST3.zip
