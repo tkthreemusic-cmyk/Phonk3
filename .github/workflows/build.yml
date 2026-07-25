@@ -1,0 +1,57 @@
+name: Build VST3 Plugin
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure CMake
+        run: cmake -B build -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build VST3
+        run: cmake --build build --config Release --target PhonkSynth_VST3
+
+      - name: Package VST3
+        shell: pwsh
+        run: |
+          $vst3Dir = "build\PhonkSynth_artefacts\Release\VST3\Phonk Synth.vst3"
+          Compress-Archive -Path $vst3Dir -DestinationPath "PhonkSynth-Windows-VST3.zip" -Force
+
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: PhonkSynth-Windows-VST3.zip
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y cmake libasound2-dev libjack-jackd2-dev libx11-dev libxext-dev libxinerama-dev libxrandr-dev libxcursor-dev libxcomposite-dev libflac-dev libogg-dev libvorbis-dev libpng-dev libfreetype6-dev pkg-config
+
+      - name: Configure CMake
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build VST3
+        run: cmake --build build --config Release --target PhonkSynth_VST3
+
+      - name: Package VST3
+        run: |
+          cd build/PhonkSynth_artefacts/Release/VST3
+          zip -r "../../../../PhonkSynth-Linux-VST3.zip" "Phonk Synth.vst3"
+
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/PhonkSynth_artefacts/Release/PhonkSynth-Linux-VST3.zip
