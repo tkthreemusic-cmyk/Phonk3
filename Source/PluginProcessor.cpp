@@ -168,7 +168,12 @@ void PhonkSynthAudioProcessor::prepareToPlay (double sampleRate, int samplesPerB
     for (auto& d : drive)         d.prepare (spec);
     for (auto& c : lofiCrusher)   c.prepare (sampleRate);
     chorus.prepare (spec);
-    reverb.setSampleRate (sampleRate);
+    reverbParams.roomSize = 0.5f;
+    reverbParams.damping = 0.5f;
+    reverbParams.wetLevel = 1.0f;
+    reverbParams.dryLevel = 0.0f;
+    reverbParams.width = 1.0f;
+    reverb.setParameters (reverbParams);
 }
 
 void PhonkSynthAudioProcessor::releaseResources() {}
@@ -318,11 +323,9 @@ void PhonkSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
 
         juce::AudioBuffer<float> reverbBuffer;
         reverbBuffer.makeCopyOf (buffer);
-
-        if (numChannels == 2)
-            reverb.processStereo (reverbBuffer.getWritePointer (0), reverbBuffer.getWritePointer (1), numSamples);
-        else
-            reverb.processMono (reverbBuffer.getWritePointer (0), numSamples);
+        juce::dsp::AudioBlock<float> reverbBlock (reverbBuffer);
+        juce::dsp::ProcessContextReplacing<float> reverbCtx (reverbBlock);
+        reverb.process (reverbCtx);
 
         for (int ch = 0; ch < numChannels; ++ch)
         {
