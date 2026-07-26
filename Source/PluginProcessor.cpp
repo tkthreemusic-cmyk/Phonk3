@@ -316,20 +316,24 @@ void PhonkSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
         reverbParams.width    = 1.0f;
         reverb.setParameters (reverbParams);
 
-        juce::AudioBuffer<float> reverbBuffer;
-        reverbBuffer.makeCopyOf (buffer);
+        // Create a buffer for reverb processing
+        juce::AudioBuffer<float> reverbBuffer (numChannels, numSamples);
+        reverbBuffer.copyFrom (buffer, 0, buffer, 0, numSamples);
 
-        if (numChannels == 2)
-            reverb.processStereo (reverbBuffer.getWritePointer (0), reverbBuffer.getWritePointer (1), numSamples);
-        else
-            reverb.processMono (reverbBuffer.getWritePointer (0), numSamples);
+        // Process reverb using JUCE 7 DSP pattern
+        auto reverbBlock = juce::dsp::AudioBlock<float> (reverbBuffer);
+        auto reverbContext = juce::dsp::ProcessContextReplacing<float> (reverbBlock);
+        reverb.process (reverbContext);
 
+        // Mix dry and wet signals
         for (int ch = 0; ch < numChannels; ++ch)
         {
-            auto* dst = buffer.getWritePointer (ch);
-            auto* wet = reverbBuffer.getReadPointer (ch);
             for (int i = 0; i < numSamples; ++i)
-                dst[i] = dst[i] * (1.0f - rvMix) + wet[i] * rvMix;
+            {
+                float dry = buffer.getSample (ch, i);
+                float wet = reverbBuffer.getSample (ch, i);
+                buffer.setSample (ch, i, dry * (1.0f - rvMix) + wet * rvMix);
+            }
         }
     }
 
