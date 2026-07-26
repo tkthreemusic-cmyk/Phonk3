@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(PhonkSynth VERSION 1.0.0)
+project(PhonkSynth VERSION 1.0.2)
 
 include(FetchContent)
 FetchContent_Declare(
