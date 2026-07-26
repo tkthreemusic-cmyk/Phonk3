@@ -317,8 +317,7 @@ void PhonkSynthAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
         reverb.setParameters (reverbParams);
 
         // Create a buffer for reverb processing
-        juce::AudioBuffer<float> reverbBuffer (numChannels, numSamples);
-        reverbBuffer.copyFrom (0, 0, buffer, 0, (int) numSamples);
+        juce::AudioBuffer<float> reverbBuffer (buffer);
 
         // Process reverb using JUCE 7 DSP pattern
         auto reverbBlock = juce::dsp::AudioBlock<float> (reverbBuffer);
