@@ -168,7 +168,7 @@ void PhonkSynthAudioProcessor::prepareToPlay (double sampleRate, int samplesPerB
     for (auto& d : drive)         d.prepare (spec);
     for (auto& c : lofiCrusher)   c.prepare (sampleRate);
     chorus.prepare (spec);
-    reverb.setSampleRate (sampleRate);
+    reverb.prepare (spec);
 }
 
 void PhonkSynthAudioProcessor::releaseResources() {}
